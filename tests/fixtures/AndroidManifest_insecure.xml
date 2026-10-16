@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.example.vulnerableapp"
+    android:versionCode="1"
+    android:versionName="0.0.1-beta">
+
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="28" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <application
+        android:name=".VulnerableApp"
+        android:allowBackup="true"
+        android:debuggable="true"
+        android:usesCleartextTraffic="true">
+
+        <!-- Exported without explicit attribute on targetSdk=28 with intent-filter -->
+        <activity android:name=".LegacyShareActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+
+        <!-- Explicitly exported service with no permission guard -->
+        <service
+            android:name=".UnprotectedCommandService"
+            android:exported="true" />
+
+        <!-- Exported provider without readPermission or writePermission -->
+        <provider
+            android:name=".VulnerableDataProvider"
+            android:authorities="com.example.vulnerableapp.provider"
+            android:exported="true" />
+
+        <!-- Receiver exported with no permission -->
+        <receiver
+            android:name=".SecretActionReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.ACTION_SECRET" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Suspicious meta-data with API key / token in name -->
+        <meta-data
+            android:name="google_api_key"
+            android:value="AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q" />
+        <meta-data
+            android:name="backend_jwt_secret"
+            android:value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c" />
+    </application>
+</manifest>

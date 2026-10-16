@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>APK Hardening Audit Tool - Defensive Security Scanner</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <a href="/" class="brand">
+        <div class="brand-icon">🛡️</div>
+        <span class="brand-title">APK Hardening Audit</span>
+        <span class="badge-defensive">Defensive Developer Tool</span>
+      </a>
+      <div style="font-size: 0.85rem; color: var(--text-muted);">
+        Local Security Audit &bull; Developer-Side
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div style="text-align: center; max-width: 720px; margin: 2rem auto 1rem;">
+      <h1 style="font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em;">
+        Audit & Harden Your Android App
+      </h1>
+      <p style="color: var(--text-muted); font-size: 1.05rem; margin-top: 0.75rem;">
+        Automated defensive static analysis to detect configuration weaknesses, insecure storage, cleartext endpoints, and hardcoded secrets before shipping to production.
+      </p>
+    </div>
+
+    <!-- Error Messages / Flash -->
+    {% if error %}
+    <div style="max-width: 760px; margin: 1.5rem auto; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--sev-high); border-radius: var(--radius-md); padding: 1.25rem 1.5rem; color: #fca5a5;">
+      <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
+        <span style="font-size: 1.25rem;">⚠️</span>
+        <div>
+          <strong style="color: #fff;">Scan Error:</strong>
+          <p style="margin-top: 0.25rem; font-size: 0.95rem;">{{ error }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Upload Card -->
+    <div class="upload-card" style="max-width: 760px; margin: 1.5rem auto;">
+      <form id="upload-form" action="/scan" method="POST" enctype="multipart/form-data">
+        
+        <div class="disclaimer-box">
+          <span style="font-size: 1.2rem;">⚖️</span>
+          <div>
+            <strong>Ethical & Permission Notice:</strong>
+            <p style="margin-top: 0.2rem;">
+              Only upload APKs you own or have explicit authorization to analyze. This tool performs local defensive inspection only and does not tamper with or bypass protections.
+            </p>
+          </div>
+        </div>
+
+        <div class="upload-zone" id="drop-zone">
+          <div class="upload-icon">📦</div>
+          <h3 style="font-size: 1.25rem; font-weight: 600;">Drag & drop your APK here</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.35rem;">
+            or click to browse from your computer (Max 200 MB)
+          </p>
+          <input type="file" id="apk_file" name="apk_file" accept=".apk" required onchange="handleFileSelected(this)">
+          <div id="selected-file-name" class="file-info" style="display: none;"></div>
+        </div>
+
+        <div class="options-row">
+          <label class="checkbox-label">
+            <input type="checkbox" name="keep_artifacts" value="true">
+            <span>Keep decoded artifacts in workspace (for manual inspection)</span>
+          </label>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem; font-size: 1.05rem;" disabled>
+          🔍 Start Security Audit
+        </button>
+      </form>
+
+      <!-- Progress Loading State -->
+      <div id="loading-overlay">
+        <div class="spinner"></div>
+        <h3 style="font-size: 1.2rem; font-weight: 600;">Analyzing Application...</h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;" id="loading-status-text">
+          Decoding APK resources and running security rules... This typically takes 10 to 45 seconds.
+        </p>
+      </div>
+    </div>
+
+    <!-- Features Banner -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 760px; margin: 3rem auto 1rem;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒</div>
+        <h4 style="font-size: 0.95rem; font-weight: 600;">Secret Redaction</h4>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Detected credentials are automatically masked (showing first 4 and last 2 characters only).
+        </p>
+      </div>
+
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
+        <h4 style="font-size: 0.95rem; font-weight: 600;">100% Local Execution</h4>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
+          No external network calls, no cloud telemetry. Everything runs on localhost:5000.
+        </p>
+      </div>
+
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
+        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛠️</div>
+        <h4 style="font-size: 0.95rem; font-weight: 600;">Actionable Fixes</h4>
+        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
+          Every finding is paired with concrete Gradle and AndroidManifest code snippets.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">
+      APK Hardening Audit Tool &bull; Strictly defensive developer utility &bull; No modification or repackaging
+    </div>
+  </footer>
+
+  <script>
+    const fileInput = document.getElementById('apk_file');
+    const dropZone = document.getElementById('drop-zone');
+    const fileNameDisplay = document.getElementById('selected-file-name');
+    const submitBtn = document.getElementById('submit-btn');
+    const uploadForm = document.getElementById('upload-form');
+    const loadingOverlay = document.getElementById('loading-overlay');
+
+    function handleFileSelected(input) {
+      if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+        fileNameDisplay.textContent = `Selected: ${file.name} (${sizeMb} MB)`;
+        fileNameDisplay.style.display = 'block';
+        submitBtn.disabled = false;
+      }
+    }
+
+    ['dragenter', 'dragover'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      dropZone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      });
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        fileInput.files = e.dataTransfer.files;
+        handleFileSelected(fileInput);
+      }
+    });
+
+    uploadForm.addEventListener('submit', () => {
+      submitBtn.disabled = true;
+      loadingOverlay.style.display = 'block';
+      window.scrollTo({ top: uploadForm.offsetTop, behavior: 'smooth' });
+    });
+  </script>
+</body>
+</html>

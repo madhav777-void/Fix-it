@@ -1,0 +1,329 @@
+# APK Hardening Audit Tool - Security Rules Definition
+# This file centralizes rule metadata, descriptions, remediation snippets, and reference URLs.
+
+settings:
+  current_target_sdk_requirement: 34
+  min_sdk_recommended: 24
+  entropy_threshold: 4.0
+  entropy_min_len: 20
+
+rules:
+  # ============================================================================
+  # MANIFEST RULES
+  # ============================================================================
+  MANIFEST-001:
+    title: "Application is Debuggable"
+    severity: "High"
+    description: "The application has android:debuggable explicitly set to 'true'. This allows arbitrary code execution, memory dumping, and dynamic debugging via ADB even on non-rooted production devices."
+    fix: "Ensure android:debuggable is removed or set to 'false' in production release builds. Android Gradle plugin sets this automatically based on the build variant."
+    code_snippet: |
+      <application
+          android:debuggable="false"
+          tools:ignore="HardcodedDebugMode">
+      </application>
+    references:
+      - "https://developer.android.com/guide/topics/manifest/application-element#debug"
+      - "OWASP MASVS-RESILIENCE-1: Reverse Engineering & Tampering"
+
+  MANIFEST-002:
+    title: "Application Backup Enabled (allowBackup is True or Default)"
+    severity: "Medium"
+    description: "android:allowBackup is set to 'true' or omitted (Android defaults to 'true'). An attacker with ADB or physical device access can extract the application's private databases, SharedPreferences, and internal files using 'adb backup'."
+    fix: "Set android:allowBackup='false' in AndroidManifest.xml, or define fine-grained dataExtractionRules (Android 12+) and fullBackupContent (Android 6+) to exclude sensitive files."
+    code_snippet: |
+      <application
+          android:allowBackup="false"
+          android:dataExtractionRules="@xml/data_extraction_rules"
+          android:fullBackupContent="@xml/backup_rules">
+      </application>
+    references:
+      - "https://developer.android.com/guide/topics/manifest/application-element#allowbackup"
+      - "https://developer.android.com/guide/topics/data/autobackup"
+      - "OWASP MASVS-STORAGE-2: Insecure Backup"
+
+  MANIFEST-003:
+    title: "Exported Component Without Permission Guard"
+    severity: "Medium"
+    description: "An Activity, Service, or BroadcastReceiver is exported and accessible to any third-party app installed on the device without requiring an android:permission guard."
+    fix: "Set android:exported='false' if the component is only intended for internal application use. If external access is required, protect it with a custom signature-level permission (protectionLevel='signature')."
+    code_snippet: |
+      <!-- Option A: Restrict to internal application only -->
+      <activity
+          android:name=".InternalActivity"
+          android:exported="false" />
+
+      <!-- Option B: Require signature protection if shared among your apps -->
+      <service
+          android:name=".SharedSyncService"
+          android:exported="true"
+          android:permission="com.example.permission.SYNC_SERVICE" />
+    references:
+      - "https://developer.android.com/guide/topics/manifest/activity-element#exported"
+      - "https://developer.android.com/guide/topics/permissions/defining"
+      - "OWASP MASVS-PLATFORM-1: IPC & Component Security"
+
+  MANIFEST-004:
+    title: "Exported ContentProvider Without Read/Write Permissions"
+    severity: "High"
+    description: "A ContentProvider is exported to other apps on the device without declaring android:readPermission, android:writePermission, or android:permission. Any application can query, insert, update, or delete sensitive data."
+    fix: "Set android:exported='false' if external access is not required. If third-party access is needed, specify readPermission and writePermission guarded with signature-level permissions."
+    code_snippet: |
+      <provider
+          android:name=".AppDataProvider"
+          android:authorities="com.example.provider"
+          android:exported="false"
+          android:grantUriPermissions="false" />
+    references:
+      - "https://developer.android.com/guide/topics/manifest/provider-element"
+      - "OWASP MASVS-PLATFORM-1: Content Provider Exposure"
+
+  MANIFEST-005:
+    title: "minSdkVersion is Below 24 (Android 7.0)"
+    severity: "Low"
+    description: "minSdkVersion is lower than 24. Older Android versions lack modern platform defenses such as Network Security Configuration by default, scoped storage, and modern crypto algorithms."
+    fix: "Consider raising minSdkVersion to at least 24 (or 26) if your user base metrics allow. If older devices must be supported, verify backward-compatible cryptographic controls and explicit network policies."
+    code_snippet: |
+      android {
+          defaultConfig {
+              minSdkVersion 24
+              targetSdkVersion 34
+          }
+      }
+    references:
+      - "https://developer.android.com/guide/topics/manifest/uses-sdk-element"
+      - "https://source.android.com/security"
+
+  MANIFEST-006:
+    title: "targetSdkVersion Below Current Play Store Requirement"
+    severity: "Medium"
+    description: "The application's targetSdkVersion is below the current Google Play requirement. Outdated target SDKs do not enforce newer OS security sandboxing, permission restrictions, and privacy protections."
+    fix: "Update targetSdkVersion to the latest API level (currently API 34+). Test your application against behavioral changes introduced in each Android release."
+    code_snippet: |
+      android {
+          defaultConfig {
+              targetSdkVersion 34
+          }
+      }
+    references:
+      - "https://developer.android.com/google/play/requirements/target-sdk"
+      - "https://developer.android.com/guide/topics/manifest/uses-sdk-element#target"
+
+  MANIFEST-007:
+    title: "High-Risk or Dangerous Permissions Requested"
+    severity: "Low"
+    description: "The application requests dangerous or sensitive permissions (such as READ_SMS, ACCESS_BACKGROUND_LOCATION, RECORD_AUDIO, READ_CALL_LOG, READ_CONTACTS). Verify this capability is strictly necessary for core functionality."
+    fix: "Verify if these dangerous permissions can be replaced with privacy-friendly modern alternatives, such as the SMS Retriever API, Photo Picker, or foreground-only location."
+    code_snippet: |
+      <!-- Review and remove unused dangerous permissions -->
+      <!-- Use modern alternatives like SMS Retriever API instead of READ_SMS -->
+    references:
+      - "https://developer.android.com/guide/topics/permissions/overview"
+      - "OWASP MASVS-PLATFORM-2: Android Permissions Best Practices"
+
+  # ============================================================================
+  # NETWORK RULES
+  # ============================================================================
+  NET-001:
+    title: "Cleartext Traffic Allowed (usesCleartextTraffic=true)"
+    severity: "High"
+    description: "android:usesCleartextTraffic is set to 'true'. This disables platform cleartext protections and allows unencrypted HTTP network communications subject to passive interception and active man-in-the-middle (MitM) attacks."
+    fix: "Remove android:usesCleartextTraffic or set it to 'false'. Enforce HTTPS everywhere and use a network_security_config.xml file for domain-specific policies."
+    code_snippet: |
+      <application
+          android:usesCleartextTraffic="false"
+          android:networkSecurityConfig="@xml/network_security_config">
+      </application>
+    references:
+      - "https://developer.android.com/guide/topics/manifest/application-element#usesCleartextTraffic"
+      - "OWASP MASVS-NETWORK-1: Secure Network Communication"
+
+  NET-002:
+    title: "Network Security Config Permits Cleartext Traffic"
+    severity: "High"
+    description: "The network_security_config.xml permits cleartext HTTP traffic either in the <base-config> or in one or more <domain-config> entries."
+    fix: "Set cleartextTrafficPermitted='false' in both <base-config> and <domain-config> elements."
+    code_snippet: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <network-security-config>
+          <base-config cleartextTrafficPermitted="false">
+              <trust-anchors>
+                  <certificates src="system" />
+              </trust-anchors>
+          </base-config>
+      </network-security-config>
+    references:
+      - "https://developer.android.com/training/articles/security-config#CleartextTrafficPermitted"
+      - "OWASP MASVS-NETWORK-1: Enforce TLS"
+
+  NET-003:
+    title: "Unencrypted HTTP URLs Detected Without Network Security Config"
+    severity: "Medium"
+    description: "No network_security_config was found, and plaintext 'http://' endpoints were identified in resources or bytecode. Plaintext HTTP is vulnerable to eavesdropping and data manipulation."
+    fix: "Upgrade all server endpoints to HTTPS ('https://') and define a network_security_config enforcing TLS."
+    code_snippet: |
+      <!-- res/xml/network_security_config.xml -->
+      <network-security-config>
+          <base-config cleartextTrafficPermitted="false" />
+      </network-security-config>
+    references:
+      - "https://developer.android.com/training/articles/security-config"
+      - "OWASP MASVS-NETWORK-1: Data in Transit"
+
+  NET-004:
+    title: "Certificate Pinning Not Configured"
+    severity: "Low"
+    description: "No certificate pin-set was identified in the Network Security Configuration. While not mandatory for all apps, certificate pinning helps defend against compromised Certificate Authorities (CAs) and rogue root certificates."
+    fix: "Add a <pin-set> in res/xml/network_security_config.xml for sensitive backend domains. Always configure a backup pin and an expiration date to prevent app breakage during certificate rotations."
+    code_snippet: |
+      <network-security-config>
+          <domain-config>
+              <domain includeSubdomains="true">api.example.com</domain>
+              <pin-set expiration="2027-01-01">
+                  <!-- Primary pin -->
+                  <pin digest="SHA-256">base64EncodedPrimaryPin=</pin>
+                  <!-- Backup pin for rotation -->
+                  <pin digest="SHA-256">base64EncodedBackupPin=</pin>
+              </pin-set>
+          </domain-config>
+      </network-security-config>
+    references:
+      - "https://developer.android.com/training/articles/security-config#CertificatePinning"
+      - "OWASP MASVS-NETWORK-2: Key Pinning"
+
+  NET-005:
+    title: "User CA Trust Anchors Allowed in Release Configuration"
+    severity: "Medium"
+    description: "The Network Security Configuration trusts user-installed Certificate Authorities (<certificates src='user'/>) in release base-config or domain-config. This allows traffic interception on devices where a user certificate is installed."
+    fix: "Restrict user CA certificates to <debug-overrides> so they are only trusted during local development and testing, never in release builds."
+    code_snippet: |
+      <network-security-config>
+          <base-config>
+              <trust-anchors>
+                  <certificates src="system" />
+              </trust-anchors>
+          </base-config>
+          <debug-overrides>
+              <trust-anchors>
+                  <certificates src="user" />
+              </trust-anchors>
+          </debug-overrides>
+      </network-security-config>
+    references:
+      - "https://developer.android.com/training/articles/security-config#ConfiguringDebug"
+      - "OWASP MASVS-NETWORK-1: CA Trust"
+
+  # ============================================================================
+  # SECRET RULES
+  # ============================================================================
+  SECRET-001:
+    title: "Potential Hardcoded Credential or API Secret Detected"
+    severity: "High"
+    description: "Hardcoded API keys, cloud tokens, or high-entropy credentials were found embedded in resources, assets, or smali bytecode. Compiled APKs are easily unpacked, exposing static credentials."
+    fix: "Move static secrets to backend services using authenticated APIs and short-lived tokens. If the credential was already shipped in an APK, ROTATE the key immediately in your cloud/service console, as removing it from source code does not invalidate the already-distributed key."
+    code_snippet: |
+      // Use short-lived OAuth / JWT tokens obtained from your authenticated backend
+      // Do not store client secret keys or master cloud credentials inside the APK.
+    references:
+      - "https://developer.android.com/training/articles/keystore"
+      - "OWASP MASVS-STORAGE-1: Hardcoded Keys and Secrets"
+
+  # ============================================================================
+  # STORAGE RULES
+  # ============================================================================
+  STORAGE-001:
+    title: "Sensitive Data in Unencrypted SharedPreferences"
+    severity: "Medium"
+    description: "SharedPreferences filenames or keys containing terms like 'token', 'password', 'pin', or 'secret' were detected without evidence of EncryptedSharedPreferences usage."
+    fix: "Use EncryptedSharedPreferences from the AndroidX Security library (backed by Android Keystore MasterKey)."
+    code_snippet: |
+      val masterKey = MasterKey.Builder(context)
+          .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+          .build()
+
+      val sharedPreferences = EncryptedSharedPreferences.create(
+          context,
+          "secure_prefs",
+          masterKey,
+          EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+          EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+      )
+    references:
+      - "https://developer.android.com/reference/androidx/security/crypto/EncryptedSharedPreferences"
+      - "OWASP MASVS-STORAGE-1: Encrypted Storage"
+
+  STORAGE-002:
+    title: "Insecure File Creation Mode (MODE_WORLD_READABLE/WRITEABLE)"
+    severity: "High"
+    description: "The application references deprecated MODE_WORLD_READABLE or MODE_WORLD_WRITEABLE flags when creating files or SharedPreferences. This makes private app data globally readable or writable by any other app on the device."
+    fix: "Use Context.MODE_PRIVATE (0) exclusively when opening files or SharedPreferences. Never use world-readable or world-writable modes."
+    code_snippet: |
+      val fileOutputStream = context.openFileOutput("sensitive_data.txt", Context.MODE_PRIVATE)
+    references:
+      - "https://developer.android.com/reference/android/content/Context#MODE_WORLD_READABLE"
+      - "OWASP MASVS-STORAGE-1: File Permissions"
+
+  STORAGE-003:
+    title: "Sensitive Files Stored in External Shared Storage"
+    severity: "Medium"
+    description: "The application references external storage (getExternalStorageDirectory, getExternalFilesDir, WRITE_EXTERNAL_STORAGE) alongside sensitive file naming patterns. External storage may be accessible to other apps and persists after uninstall."
+    fix: "Store sensitive files exclusively in internal app storage (context.filesDir or context.noBackupFilesDir), or encrypt files using EncryptedFile before writing to shared directories."
+    code_snippet: |
+      // Store in private internal directory
+      val privateFile = File(context.filesDir, "credentials.dat")
+    references:
+      - "https://developer.android.com/training/data-storage"
+      - "OWASP MASVS-STORAGE-1: Internal Storage"
+
+  # ============================================================================
+  # BUILD & INTEGRITY RULES
+  # ============================================================================
+  BUILD-001:
+    title: "No Evidence of R8 / ProGuard Obfuscation"
+    severity: "Medium"
+    description: "No evidence of class name obfuscation (such as single-letter packages/classes like a.b.c) was detected in smali bytecode. Unobfuscated APKs make decompilation, reverse engineering, and finding attack surfaces significantly easier."
+    fix: "Enable code minification and resource shrinking in your release build type in build.gradle."
+    code_snippet: |
+      android {
+          buildTypes {
+              release {
+                  minifyEnabled true
+                  shrinkResources true
+                  proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+              }
+          }
+      }
+    references:
+      - "https://developer.android.com/build/shrink-code"
+      - "OWASP MASVS-RESILIENCE-1: Code Obfuscation"
+
+  BUILD-002:
+    title: "Outdated APK Signature Scheme (v1-only)"
+    severity: "Medium"
+    description: "The APK is signed with Signature Scheme v1 (JAR signing) without APK Signature Scheme v2 or v3. Scheme v1 does not protect APK metadata and ZIP structures from tampering and is slower to verify."
+    fix: "Enable v2SigningEnabled and v3SigningEnabled in your Gradle signingConfig block."
+    code_snippet: |
+      android {
+          signingConfigs {
+              release {
+                  enableV1Signing true
+                  enableV2Signing true
+                  enableV3Signing true
+                  // ... storeFile, storePassword, keyAlias, keyPassword
+              }
+          }
+      }
+    references:
+      - "https://source.android.com/docs/security/features/apksigning"
+      - "OWASP MASVS-RESILIENCE-1: Signature Verification"
+
+  BUILD-003:
+    title: "Debug Certificate Signature Detected"
+    severity: "High"
+    description: "The APK is signed with a known Android Debug certificate (e.g. 'CN=Android Debug'). Debug keystores have well-known private keys, meaning anyone can create spoofed updates."
+    fix: "Always sign production release APKs with a private, dedicated release keystore stored securely in a secrets manager or CI/CD vault."
+    code_snippet: |
+      // Never distribute APKs signed with debug.keystore
+      // Generate a release keystore using: keytool -genkey -v -keystore release.jks ...
+    references:
+      - "https://developer.android.com/studio/publish/app-signing"
+      - "OWASP MASVS-RESILIENCE-1: Code Signing"

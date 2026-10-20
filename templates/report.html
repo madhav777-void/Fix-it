@@ -4,11 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Security Audit Report - {{ report.package_name }}</title>
-  {% if standalone %}
+  <link rel="stylesheet" href="/static/style.css">
+  {% if embedded_css %}
   {# Split tag strings prevent IDE HTML/CSS linters from misinterpreting template expressions as CSS syntax #}
   {{ ("<" ~ "style>\n" ~ embedded_css ~ "\n</" ~ "style>") | safe }}
-  {% else %}
-  <link rel="stylesheet" href="/static/style.css">
   {% endif %}
 </head>
 <body>

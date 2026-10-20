@@ -13,7 +13,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from flask import Flask, abort, flash, redirect, render_template, request, send_file, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, send_file, send_from_directory, url_for
 
 from scanner.decoder import (
     cleanup_directory,
@@ -54,6 +54,28 @@ app = Flask(
 )
 app.config["SECRET_KEY"] = os.urandom(24).hex()
 app.config["MAX_CONTENT_LENGTH"] = MAX_APK_SIZE_BYTES
+
+# Cache stylesheet content for instant embedding and fallback delivery
+STYLE_CSS_PATH = BASE_DIR / "static" / "style.css"
+EMBEDDED_CSS = ""
+if STYLE_CSS_PATH.is_file():
+    try:
+        EMBEDDED_CSS = STYLE_CSS_PATH.read_text(encoding="utf-8")
+    except Exception:
+        pass
+
+
+@app.context_processor
+def inject_global_css():
+    """Ensure all templates have access to embedded CSS regardless of hosting environment."""
+    return {"embedded_css": EMBEDDED_CSS}
+
+
+@app.route("/static/<path:filename>")
+def serve_static_file(filename: str):
+    """Direct static file delivery for serverless environments where CDN rewrites may bypass default handler."""
+    return send_from_directory(str(BASE_DIR / "static"), filename)
+
 
 # Global audit engine and reporter
 engine = AuditEngine()

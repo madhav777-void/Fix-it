@@ -135,6 +135,17 @@ def get_apktool_command() -> Optional[list[str]]:
         java = shutil.which("java") or "java"
         return [java, "-jar", apktool_jar]
 
+    # Check local project bin or root folder for apktool.jar
+    project_root = Path(__file__).resolve().parent.parent
+    local_jars = [
+        project_root / "bin" / "apktool.jar",
+        project_root / "apktool.jar",
+    ]
+    for jar in local_jars:
+        if jar.is_file():
+            java = shutil.which("java") or "java"
+            return [java, "-jar", str(jar)]
+
     return None
 
 

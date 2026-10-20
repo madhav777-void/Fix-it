@@ -1,0 +1,2 @@
+# This file ensures the bin directory exists in Git.
+# apktool.jar will be placed here by running scripts/download_apktool.py

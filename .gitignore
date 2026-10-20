@@ -5,12 +5,20 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+*.egg-info/
+dist/
+build/
 
 # Local audit workspace (uploads and generated reports)
-workspace/
+workspace/*
+!workspace/.gitkeep
 uploads/
 
-# Environments
+# Binaries and downloaded dependencies
+bin/*.jar
+!bin/.gitkeep
+
+# Environments & sensitive files
 .env
 .venv
 env/

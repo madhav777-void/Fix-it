@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import shutil
+import tempfile
 import time
 import uuid
 from dataclasses import asdict
@@ -30,8 +31,21 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(na
 logger = logging.getLogger("apk_audit")
 
 BASE_DIR = Path(__file__).resolve().parent
-WORKSPACE_DIR = BASE_DIR / "workspace"
-WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Serverless/Vercel fallback for workspace path
+custom_workspace = os.environ.get("WORKSPACE_DIR")
+if custom_workspace:
+    WORKSPACE_DIR = Path(custom_workspace)
+elif os.environ.get("VERCEL") or not os.access(BASE_DIR, os.W_OK):
+    WORKSPACE_DIR = Path(tempfile.gettempdir()) / "apk_audit_workspace"
+else:
+    WORKSPACE_DIR = BASE_DIR / "workspace"
+
+try:
+    WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    WORKSPACE_DIR = Path(tempfile.gettempdir()) / "apk_audit_workspace"
+    WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(
     __name__,

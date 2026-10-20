@@ -5,25 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Security Audit Report - {{ report.package_name }}</title>
   {% if standalone %}
-  <style>
-    {{ embedded_css | safe }}
-  </style>
+  {# Split tag strings prevent IDE HTML/CSS linters from misinterpreting template expressions as CSS syntax #}
+  {{ ("<" ~ "style>\n" ~ embedded_css ~ "\n</" ~ "style>") | safe }}
   {% else %}
   <link rel="stylesheet" href="/static/style.css">
   {% endif %}
 </head>
 <body>
+  <!-- Header -->
   <header class="app-header">
     <div class="header-inner">
       <a href="/" class="brand">
         <div class="brand-icon">🛡️</div>
         <span class="brand-title">APK Hardening Audit</span>
-        <span class="badge-defensive">Defensive Developer Tool</span>
+        <span class="badge-defensive">Report</span>
       </a>
+
       {% if not standalone %}
       <div class="header-actions">
         <a href="/report/{{ report.scan_id }}/download" class="btn btn-secondary" download="apk_audit_{{ report.package_name }}.html">
-          ⬇️ Download Standalone HTML
+          Download Standalone HTML
         </a>
         <a href="/" class="btn btn-primary">
           + New Scan
@@ -33,71 +34,70 @@
     </div>
   </header>
 
-  <main class="container">
-    <section class="report-header">
-      <div class="report-title">
+  <main class="container container-wide">
+    <!-- Report Title Header -->
+    <div class="report-header-classic">
+      <div class="report-header-left">
         <h1>Audit Report: {{ report.package_name }}</h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
-          Defensive static security assessment generated on {{ report.scan_time }}
-        </p>
+        <p>Defensive static security assessment generated on {{ report.scan_time }}</p>
       </div>
-      <div style="text-align: right;">
-        <span class="sev-badge {{ report.overall_risk }}" style="font-size: 1rem; padding: 0.4rem 1.2rem;">
+      <div>
+        <span class="risk-pill {{ report.overall_risk }}">
           Overall Risk: {{ report.overall_risk }}
         </span>
       </div>
-    </section>
+    </div>
 
-    <!-- App Metadata Grid -->
-    <div class="meta-grid">
-      <div class="meta-item">
-        <div class="meta-label">Package Name</div>
-        <div class="meta-value">{{ report.package_name }}</div>
+    <!-- Metadata Grid -->
+    <div class="meta-bar-classic">
+      <div class="meta-box">
+        <div class="meta-box-label">Package Name</div>
+        <div class="meta-box-value" title="{{ report.package_name }}">{{ report.package_name }}</div>
       </div>
-      <div class="meta-item">
-        <div class="meta-label">Version Name / Code</div>
-        <div class="meta-value">{{ report.version_name }} ({{ report.version_code or 'N/A' }})</div>
+      <div class="meta-box">
+        <div class="meta-box-label">App Version</div>
+        <div class="meta-box-value">{{ report.version_name }} ({{ report.version_code or 'N/A' }})</div>
       </div>
-      <div class="meta-item">
-        <div class="meta-label">minSdkVersion / targetSdk</div>
-        <div class="meta-value">API {{ report.min_sdk or 'N/A' }} / API {{ report.target_sdk or 'N/A' }}</div>
+      <div class="meta-box">
+        <div class="meta-box-label">SDK Levels</div>
+        <div class="meta-box-value">Min {{ report.min_sdk or 'N/A' }} &bull; Target {{ report.target_sdk or 'N/A' }}</div>
       </div>
-      <div class="meta-item">
-        <div class="meta-label">Scan ID / Tool Version</div>
-        <div class="meta-value">{{ report.scan_id[:8] }}... / v{{ report.tool_version }}</div>
+      <div class="meta-box">
+        <div class="meta-box-label">Scan ID / Duration</div>
+        <div class="meta-box-value">{{ report.scan_id[:8] }} &bull; {{ report.duration_seconds }}s</div>
       </div>
     </div>
 
     <!-- Summary Metrics -->
-    <div class="summary-grid" style="margin-top: 1.5rem;">
-      <div class="summary-card high">
-        <div class="meta-label" style="color: var(--sev-high);">High Severity</div>
-        <div class="summary-count">{{ report.high_count }}</div>
-        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">Requires immediate defensive fix</p>
+    <div class="summary-grid-classic">
+      <div class="summary-card-classic high">
+        <div class="summary-card-label" style="color: var(--sev-high-text);">High Severity</div>
+        <div class="summary-card-num" style="color: var(--sev-high-text);">{{ report.high_count }}</div>
+        <div class="summary-card-sub">Immediate defensive fix required</div>
       </div>
-      <div class="summary-card med">
-        <div class="meta-label" style="color: var(--sev-med);">Medium Severity</div>
-        <div class="summary-count">{{ report.medium_count }}</div>
-        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">Recommended security hardening</p>
+      <div class="summary-card-classic med">
+        <div class="summary-card-label" style="color: var(--sev-med-text);">Medium Severity</div>
+        <div class="summary-card-num" style="color: var(--sev-med-text);">{{ report.medium_count }}</div>
+        <div class="summary-card-sub">Recommended hardening</div>
       </div>
-      <div class="summary-card low">
-        <div class="meta-label" style="color: var(--sev-low);">Low / Informational</div>
-        <div class="summary-count">{{ report.low_count }}</div>
-        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">Best practices & manual reviews</p>
+      <div class="summary-card-classic low">
+        <div class="summary-card-label" style="color: var(--sev-low-text);">Low / Info</div>
+        <div class="summary-card-num" style="color: var(--sev-low-text);">{{ report.low_count }}</div>
+        <div class="summary-card-sub">Best practices &amp; warnings</div>
       </div>
-      <div class="summary-card">
-        <div class="meta-label">Total Findings</div>
-        <div class="summary-count" style="color: var(--text-main);">{{ report.total_count }}</div>
-        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.5rem;">Processed in {{ report.duration_seconds }}s</p>
+      <div class="summary-card-classic total">
+        <div class="summary-card-label">Total Findings</div>
+        <div class="summary-card-num">{{ report.total_count }}</div>
+        <div class="summary-card-sub">Static checks completed</div>
       </div>
     </div>
 
-    <!-- Rule Errors (if any isolated rule failed) -->
+    <!-- Rule Warnings if any -->
     {% if report.rule_errors %}
-    <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid var(--sev-high); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 2rem;">
-      <h4 style="color: var(--sev-high); margin-bottom: 0.5rem;">⚠️ Isolated Rule Execution Warnings</h4>
+    <div style="background: var(--sev-high-bg); border: 1px solid var(--sev-high-border); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.5rem;">
+      <strong style="color: var(--sev-high-text);">⚠️ Isolated Rule Execution Warnings:</strong>
       {% for err in report.rule_errors %}
-      <p style="font-size: 0.85rem; color: #fca5a5;">
+      <p style="font-size: 0.84rem; color: var(--sev-high-text); margin-top: 0.25rem;">
         <strong>Rule {{ err.rule_id }}:</strong> {{ err.error_message }}
       </p>
       {% endfor %}
@@ -105,22 +105,22 @@
     {% endif %}
 
     <!-- Findings Section -->
-    <section class="findings-section">
-      <div class="section-header">
+    <section>
+      <div class="findings-bar-classic">
         <h2>Identified Findings ({{ report.total_count }})</h2>
-        <div class="filter-buttons">
-          <button class="filter-btn active" onclick="filterFindings('all', this)">All ({{ report.total_count }})</button>
-          <button class="filter-btn" onclick="filterFindings('High', this)">High ({{ report.high_count }})</button>
-          <button class="filter-btn" onclick="filterFindings('Medium', this)">Medium ({{ report.medium_count }})</button>
-          <button class="filter-btn" onclick="filterFindings('Low', this)">Low ({{ report.low_count }})</button>
+        <div class="filter-pills-group">
+          <button class="filter-btn-classic active" onclick="filterFindings('all', this)">All ({{ report.total_count }})</button>
+          <button class="filter-btn-classic" onclick="filterFindings('High', this)">High ({{ report.high_count }})</button>
+          <button class="filter-btn-classic" onclick="filterFindings('Medium', this)">Medium ({{ report.medium_count }})</button>
+          <button class="filter-btn-classic" onclick="filterFindings('Low', this)">Low ({{ report.low_count }})</button>
         </div>
       </div>
 
       {% if not report.findings %}
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 3rem; text-align: center;">
-        <div style="font-size: 2.5rem; margin-bottom: 1rem;">✅</div>
-        <h3>No Security Weaknesses Detected</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+      <div style="background: #ffffff; border: 1px solid var(--border-main); border-radius: var(--radius-md); padding: 3rem 1.5rem; text-align: center;">
+        <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">✅</div>
+        <h3 style="font-size: 1.15rem; font-weight: 700;">No Security Weaknesses Detected</h3>
+        <p style="color: var(--text-muted); font-size: 0.88rem; margin-top: 0.25rem;">
           All configured defensive checks passed without flagging vulnerabilities.
         </p>
       </div>
@@ -128,45 +128,55 @@
 
       <div id="findings-list">
         {% for f in report.findings %}
-        <article class="finding-card" data-severity="{{ f.severity }}">
-          <div class="finding-header">
-            <div class="finding-title-group">
-              <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <span class="sev-badge {{ f.severity }}">{{ f.severity }}</span>
-                <span style="font-family: var(--font-mono); font-size: 0.85rem; color: #818cf8; font-weight: 600;">{{ f.rule_id }}</span>
-                <h3 class="finding-title">{{ f.title }}</h3>
+        <article class="finding-item-classic" data-severity="{{ f.severity }}">
+          <div class="finding-item-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <span class="sev-badge-clean {{ f.severity }}">{{ f.severity }}</span>
+                <span class="rule-tag">{{ f.rule_id }}</span>
               </div>
-              <div class="finding-location">
+              <h3 class="finding-item-title">{{ f.title }}</h3>
+            </div>
+            <div>
+              <span class="finding-item-path">
                 📍 {{ f.file_path }}{% if f.line %}:L{{ f.line }}{% endif %}
-              </div>
+              </span>
             </div>
           </div>
 
-          <div class="finding-body">
+          <div class="finding-item-body">
             {% if f.description %}
-            <p class="finding-desc">{{ f.description }}</p>
+            <p class="finding-item-desc">{{ f.description }}</p>
             {% endif %}
 
-            <div class="meta-label" style="margin-bottom: 0.35rem;">Evidence (Redacted Preview):</div>
-            <div class="evidence-box">{{ f.evidence }}</div>
+            <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 0.35rem;">
+              Evidence (Redacted Preview)
+            </div>
+            <div class="evidence-box-clean">{{ f.evidence }}</div>
 
-            <!-- Collapsible Fix Section -->
-            <details class="fix-accordion" open>
+            <!-- Concrete Defensive Remediation -->
+            <details class="remediation-clean" open>
               <summary>🛠️ Concrete Defensive Remediation</summary>
-              <div class="fix-content">
-                <p class="fix-text">{{ f.fix }}</p>
+              <div class="remediation-clean-inner">
+                <p class="remediation-clean-text">{{ f.fix }}</p>
+
                 {% if f.code_snippet %}
-                <div class="code-block">{{ f.code_snippet }}</div>
+                <div style="position: relative;">
+                  <div class="code-box-clean" id="code-box-{{ loop.index }}">{{ f.code_snippet }}</div>
+                  <button class="copy-btn-clean" onclick="copyCode('code-box-{{ loop.index }}', this)">
+                    Copy
+                  </button>
+                </div>
                 {% endif %}
 
                 {% if f.references %}
-                <div class="references-list">
-                  <strong>Official References:</strong>
-                  <ul>
+                <div style="margin-top: 0.85rem; font-size: 0.8rem; color: var(--text-muted);">
+                  <strong>References:</strong>
+                  <ul style="padding-left: 1.25rem; margin-top: 0.25rem;">
                     {% for ref in f.references %}
                     <li>
                       {% if ref.startswith('http') %}
-                      <a href="{{ ref }}" target="_blank" rel="noopener noreferrer">{{ ref }}</a>
+                      <a href="{{ ref }}" target="_blank" rel="noopener noreferrer" style="color: var(--text-main); text-decoration: underline;">{{ ref }}</a>
                       {% else %}
                       {{ ref }}
                       {% endif %}
@@ -184,8 +194,8 @@
       {% endif %}
     </section>
 
-    <!-- Limitations Section -->
-    <section class="limitations-card">
+    <!-- Audit Limitations & Defensive Scope -->
+    <section class="limitations-clean">
       <h3>🛡️ Audit Limitations & Defensive Scope</h3>
       <ul>
         <li><strong>Static Analysis Only:</strong> This tool performs static inspection of manifest files, network configurations, decompiled bytecode, and resource strings without dynamic execution.</li>
@@ -196,18 +206,18 @@
     </section>
   </main>
 
-  <footer>
-    <div class="container">
+  <footer class="app-footer">
+    <div class="container container-wide">
       APK Hardening Audit Tool v{{ report.tool_version }} &bull; Defensive static security for Android developers &bull; Local offline analysis
     </div>
   </footer>
 
   <script>
     function filterFindings(severity, btn) {
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.filter-btn-classic').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
 
-      const cards = document.querySelectorAll('.finding-card');
+      const cards = document.querySelectorAll('.finding-item-classic');
       cards.forEach(card => {
         if (severity === 'all' || card.getAttribute('data-severity') === severity) {
           card.style.display = 'block';
@@ -215,6 +225,17 @@
           card.style.display = 'none';
         }
       });
+    }
+
+    function copyCode(elementId, btn) {
+      const el = document.getElementById(elementId);
+      if (el) {
+        navigator.clipboard.writeText(el.innerText).then(() => {
+          const original = btn.innerText;
+          btn.innerText = 'Copied!';
+          setTimeout(() => { btn.innerText = original; }, 2000);
+        });
+      }
     }
   </script>
 </body>

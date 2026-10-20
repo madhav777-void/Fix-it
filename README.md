@@ -1,5 +1,9 @@
 # APK Hardening Audit Tool (Defensive Developer-Side Scanner)
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 A local, defensive static analysis web application for Android developers to audit their own APKs (or authorized open-source builds). The tool automatically decompiles and inspects resources, configuration files, and bytecode to identify security weaknesses, flagging each finding with severity ratings, risk descriptions, and actionable remediation snippets (featuring concrete Gradle and AndroidManifest.xml code).
 
 ---
@@ -68,10 +72,17 @@ All rule metadata, descriptions, remediation instructions, and official links ar
 pip install -r requirements.txt
 ```
 
-### 3. Install `apktool`
+### 3. Setup `apktool` (Decompiler)
 
-`apktool` is used via subprocess to decode resources and binary XML into human-readable format.
+`apktool` is used to decode resources and binary XML into human-readable format.
 
+**Option A (Quickest - Cross-Platform):**
+Run the included downloader script to download `apktool.jar` directly into `bin/apktool.jar`:
+```bash
+python scripts/download_apktool.py
+```
+
+**Option B (System Installation):**
 - **Windows:**
   - Using Chocolatey:
     ```cmd
@@ -81,13 +92,10 @@ pip install -r requirements.txt
     ```cmd
     scoop install apktool
     ```
-  - Manual installation:
-    1. Download the Windows wrapper script [`apktool.bat`](https://raw.githubusercontent.com/iBotPeaches/Apktool/master/scripts/windows/apktool.bat).
-    2. Download the latest `apktool_*.jar` from [iBotPeaches/Apktool](https://github.com/iBotPeaches/Apktool/releases) and rename it to `apktool.jar`.
-    3. Move both files to a directory on your system `PATH` (e.g., `C:\Windows\System32` or `C:\Program Files\apktool`).
-  - *Optional:* You can also set the `APKTOOL_CMD` or `APKTOOL_JAR` environment variable:
+  - Or place `apktool.jar` and `apktool.bat` on your `PATH`.
+  - Or set the `APKTOOL_CMD` or `APKTOOL_JAR` environment variable:
     ```cmd
-    set APKTOOL_CMD=C:\path\to\apktool.bat
+    set APKTOOL_JAR=C:\path\to\apktool.jar
     ```
 
 - **macOS:**

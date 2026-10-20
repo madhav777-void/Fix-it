@@ -6,7 +6,7 @@ import datetime
 import logging
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Type, Union
 
 from scanner.manifest import ManifestData
 from scanner.rules.base import Finding, Rule, RuleContext, load_rules_yaml, SEVERITY_ORDER

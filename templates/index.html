@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+  <!-- Clean Classic Header -->
   <header class="app-header">
     <div class="header-inner">
       <a href="/" class="brand">
@@ -14,110 +15,116 @@
         <span class="brand-title">APK Hardening Audit</span>
         <span class="badge-defensive">Defensive Developer Tool</span>
       </a>
-      <div style="font-size: 0.85rem; color: var(--text-muted);">
-        Local Security Audit &bull; Developer-Side
+
+      <div class="header-actions">
+        <a href="#about-section" class="btn btn-secondary">
+          Security Scope
+        </a>
       </div>
     </div>
   </header>
 
   <main class="container">
-    <div style="text-align: center; max-width: 720px; margin: 2rem auto 1rem;">
-      <h1 style="font-size: 2.4rem; font-weight: 800; letter-spacing: -0.03em;">
-        Audit & Harden Your Android App
+    <!-- Classic Centered Hero -->
+    <section class="hero-clean">
+      <div class="hero-pill">
+        <span class="hero-pill-dot"></span>
+        <span>Local Static Analysis &bull; v1.0</span>
+      </div>
+
+      <h1 class="hero-title">
+        Audit &amp; Harden Your Android App
       </h1>
-      <p style="color: var(--text-muted); font-size: 1.05rem; margin-top: 0.75rem;">
+
+      <p class="hero-subtitle">
         Automated defensive static analysis to detect configuration weaknesses, insecure storage, cleartext endpoints, and hardcoded secrets before shipping to production.
       </p>
-    </div>
+    </section>
 
     <!-- Error Messages / Flash -->
     {% if error %}
-    <div style="max-width: 760px; margin: 1.5rem auto; background: rgba(239, 68, 68, 0.12); border: 1px solid var(--sev-high); border-radius: var(--radius-md); padding: 1.25rem 1.5rem; color: #fca5a5;">
-      <div style="display: flex; align-items: flex-start; gap: 0.75rem;">
-        <span style="font-size: 1.25rem;">⚠️</span>
-        <div>
-          <strong style="color: #fff;">Scan Error:</strong>
-          <p style="margin-top: 0.25rem; font-size: 0.95rem;">{{ error }}</p>
-        </div>
-      </div>
+    <div style="background: var(--sev-high-bg); border: 1px solid var(--sev-high-border); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.5rem; color: var(--sev-high-text); font-size: 0.9rem;">
+      <strong>⚠️ Scan Error:</strong> {{ error }}
     </div>
     {% endif %}
 
-    <!-- Upload Card -->
-    <div class="upload-card" style="max-width: 760px; margin: 1.5rem auto;">
+    <!-- Elegant Upload Card -->
+    <div class="upload-card-classic">
       <form id="upload-form" action="/scan" method="POST" enctype="multipart/form-data">
         
-        <div class="disclaimer-box">
-          <span style="font-size: 1.2rem;">⚖️</span>
+        <!-- Ethical & Permission Notice -->
+        <div class="notice-box-classic">
+          <span style="font-size: 1.1rem; line-height: 1;">⚖️</span>
           <div>
-            <strong>Ethical & Permission Notice:</strong>
-            <p style="margin-top: 0.2rem;">
+            <strong>Ethical &amp; Permission Notice:</strong>
+            <p style="margin-top: 0.15rem; font-size: 0.82rem; color: var(--text-body);">
               Only upload APKs you own or have explicit authorization to analyze. This tool performs local defensive inspection only and does not tamper with or bypass protections.
             </p>
           </div>
         </div>
 
-        <div class="upload-zone" id="drop-zone">
-          <div class="upload-icon">📦</div>
-          <h3 style="font-size: 1.25rem; font-weight: 600;">Drag & drop your APK here</h3>
-          <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.35rem;">
-            or click to browse from your computer (Max 200 MB)
-          </p>
+        <!-- Drag & Drop Zone -->
+        <div class="upload-zone-classic" id="drop-zone">
+          <div class="upload-zone-icon">📁</div>
+          <div class="upload-zone-title">Drag and drop your APK file here</div>
+          <div class="upload-zone-sub">or click to browse from your device (Max 200 MB &bull; .apk)</div>
           <input type="file" id="apk_file" name="apk_file" accept=".apk" required onchange="handleFileSelected(this)">
-          <div id="selected-file-name" class="file-info" style="display: none;"></div>
+          <div id="selected-file-name" class="file-selected-badge" style="display: none;"></div>
         </div>
 
-        <div class="options-row">
-          <label class="checkbox-label">
+        <!-- Options -->
+        <div class="options-row-classic">
+          <label class="checkbox-classic">
             <input type="checkbox" name="keep_artifacts" value="true">
             <span>Keep decoded artifacts in workspace (for manual inspection)</span>
           </label>
         </div>
 
-        <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 0.85rem; font-size: 1.05rem;" disabled>
-          🔍 Start Security Audit
+        <!-- Submit Button -->
+        <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 0.95rem;" disabled>
+          Analyze APK &rarr;
         </button>
       </form>
 
-      <!-- Progress Loading State -->
+      <!-- Clean Loading Indicator -->
       <div id="loading-overlay">
-        <div class="spinner"></div>
-        <h3 style="font-size: 1.2rem; font-weight: 600;">Analyzing Application...</h3>
-        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;" id="loading-status-text">
-          Decoding APK resources and running security rules... This typically takes 10 to 45 seconds.
+        <div class="classic-spinner"></div>
+        <div style="font-weight: 700; font-size: 1.05rem; color: var(--text-main);">Analyzing Application...</div>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.35rem;" id="loading-status-text">
+          Decompiling resources and running defensive security checks. This takes 10 to 30 seconds.
         </p>
       </div>
     </div>
 
-    <!-- Features Banner -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; max-width: 760px; margin: 3rem auto 1rem;">
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🔒</div>
-        <h4 style="font-size: 0.95rem; font-weight: 600;">Secret Redaction</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
-          Detected credentials are automatically masked (showing first 4 and last 2 characters only).
-        </p>
+    <!-- 3 Simple Classic Feature Highlights -->
+    <div class="features-clean-grid" id="about-section">
+      <div class="feature-clean-card">
+        <div class="feature-clean-icon">🔒</div>
+        <div class="feature-clean-title">Secret Redaction</div>
+        <div class="feature-clean-desc">
+          Discovered credentials and API keys are automatically masked to safeguard sensitive tokens in audit reports.
+        </div>
       </div>
 
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">⚡</div>
-        <h4 style="font-size: 0.95rem; font-weight: 600;">100% Local Execution</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
-          No external network calls, no cloud telemetry. Everything runs on localhost:5000.
-        </p>
+      <div class="feature-clean-card">
+        <div class="feature-clean-icon">⚡</div>
+        <div class="feature-clean-title">100% Local Analysis</div>
+        <div class="feature-clean-desc">
+          Zero network egress or cloud telemetry. The decompilation and rule engine execute purely on your local machine.
+        </div>
       </div>
 
-      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem;">
-        <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">🛠️</div>
-        <h4 style="font-size: 0.95rem; font-weight: 600;">Actionable Fixes</h4>
-        <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 0.25rem;">
-          Every finding is paired with concrete Gradle and AndroidManifest code snippets.
-        </p>
+      <div class="feature-clean-card">
+        <div class="feature-clean-icon">🛠️</div>
+        <div class="feature-clean-title">Actionable Fixes</div>
+        <div class="feature-clean-desc">
+          Every finding is paired with direct AndroidManifest.xml and Gradle build script remediation examples.
+        </div>
       </div>
     </div>
   </main>
 
-  <footer>
+  <footer class="app-footer">
     <div class="container">
       APK Hardening Audit Tool &bull; Strictly defensive developer utility &bull; No modification or repackaging
     </div>
@@ -135,8 +142,8 @@
       if (input.files && input.files[0]) {
         const file = input.files[0];
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
-        fileNameDisplay.textContent = `Selected: ${file.name} (${sizeMb} MB)`;
-        fileNameDisplay.style.display = 'block';
+        fileNameDisplay.textContent = `✓ ${file.name} (${sizeMb} MB)`;
+        fileNameDisplay.style.display = 'inline-flex';
         submitBtn.disabled = false;
       }
     }
@@ -165,7 +172,6 @@
     uploadForm.addEventListener('submit', () => {
       submitBtn.disabled = true;
       loadingOverlay.style.display = 'block';
-      window.scrollTo({ top: uploadForm.offsetTop, behavior: 'smooth' });
     });
   </script>
 </body>

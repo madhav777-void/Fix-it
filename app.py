@@ -84,6 +84,8 @@ def _reconstruct_report(data: Dict[str, Any]) -> AuditReport:
 
 
 @app.route("/", methods=["GET"])
+@app.route("/api/index", methods=["GET"])
+@app.route("/api", methods=["GET"])
 def index():
     """Upload form with ethical use and permission notice."""
     return render_template("index.html")

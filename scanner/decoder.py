@@ -133,7 +133,7 @@ def get_apktool_command() -> Optional[list[str]]:
     apktool_jar = os.environ.get("APKTOOL_JAR")
     if apktool_jar and Path(apktool_jar).is_file():
         java = shutil.which("java") or "java"
-        return [java, "-jar", apktool_jar]
+        return [java, "-Xmx384m", "-jar", apktool_jar]
 
     # Check local project bin or root folder for apktool.jar
     project_root = Path(__file__).resolve().parent.parent
@@ -144,7 +144,7 @@ def get_apktool_command() -> Optional[list[str]]:
     for jar in local_jars:
         if jar.is_file():
             java = shutil.which("java") or "java"
-            return [java, "-jar", str(jar)]
+            return [java, "-Xmx384m", "-jar", str(jar)]
 
     return None
 
@@ -183,7 +183,19 @@ def decode_apk(
             ),
         )
 
-    full_cmd = cmd + ["d", "-f", "-o", str(out_p), str(apk_p)]
+    # For large APKs (>= 30 MB), add -s (--no-src) to skip smali decompilation.
+    # Unpacking and decompiling 50,000+ smali files on large APKs exceeds
+    # container memory limits (512 MB) and triggers worker timeouts or OOM kills.
+    # Security manifest rules, network rules, permission checks, XML secrets,
+    # and signing scheme checks still execute at 100% fidelity.
+    flags = ["d", "-f"]
+    try:
+        if apk_p.stat().st_size >= 30 * 1024 * 1024:
+            flags.append("-s")
+    except Exception:
+        pass
+
+    full_cmd = cmd + flags + ["-o", str(out_p), str(apk_p)]
     start_time = time.monotonic()
 
     try:

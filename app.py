@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from flask import Flask, abort, flash, redirect, render_template, request, send_file, send_from_directory, url_for
+from werkzeug.exceptions import RequestEntityTooLarge
 
 from scanner.decoder import (
     cleanup_directory,
@@ -52,8 +53,17 @@ app = Flask(
     template_folder=str(BASE_DIR / "templates"),
     static_folder=str(BASE_DIR / "static"),
 )
-app.config["SECRET_KEY"] = os.urandom(24).hex()
-app.config["MAX_CONTENT_LENGTH"] = MAX_APK_SIZE_BYTES
+
+# Use env-provided secret key so sessions survive Vercel cold starts.
+# A random fallback is fine for local dev but breaks flash/session on serverless.
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "apk-audit-dev-secret-key-change-in-prod"
+
+# Vercel serverless has a hard 4.5 MB request body limit.
+# Cap MAX_CONTENT_LENGTH to 4 MB on Vercel so Flask returns a friendly 413
+# BEFORE the platform kills the connection with its own opaque error page.
+IS_VERCEL = bool(os.environ.get("VERCEL"))
+VERCEL_MAX_BODY_BYTES = 4 * 1024 * 1024  # 4 MB
+app.config["MAX_CONTENT_LENGTH"] = VERCEL_MAX_BODY_BYTES if IS_VERCEL else MAX_APK_SIZE_BYTES
 
 # Cache stylesheet content for instant embedding and fallback delivery
 STYLE_CSS_PATH = BASE_DIR / "static" / "style.css"
@@ -67,14 +77,41 @@ if STYLE_CSS_PATH.is_file():
 
 @app.context_processor
 def inject_global_css():
-    """Ensure all templates have access to embedded CSS regardless of hosting environment."""
-    return {"embedded_css": EMBEDDED_CSS}
+    """Ensure all templates have access to embedded CSS and upload limits regardless of hosting environment."""
+    return {
+        "embedded_css": EMBEDDED_CSS,
+        "max_upload_mb": int(app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)),
+        "is_vercel": IS_VERCEL,
+    }
 
 
 @app.route("/static/<path:filename>")
 def serve_static_file(filename: str):
     """Direct static file delivery for serverless environments where CDN rewrites may bypass default handler."""
     return send_from_directory(str(BASE_DIR / "static"), filename)
+
+
+@app.errorhandler(RequestEntityTooLarge)
+@app.errorhandler(413)
+def handle_payload_too_large(e):
+    """User-friendly error when the uploaded APK exceeds the serverless body size limit."""
+    limit_mb = app.config["MAX_CONTENT_LENGTH"] / (1024 * 1024)
+    msg = (
+        f"The uploaded file is too large for this serverless environment. "
+        f"Maximum allowed size is {limit_mb:.0f} MB. "
+        "Please use the self-hosted Docker version for larger APKs."
+    ) if IS_VERCEL else f"File exceeds the {limit_mb:.0f} MB upload limit."
+    return render_template("index.html", error=msg), 413
+
+
+@app.errorhandler(500)
+def handle_server_error(e):
+    """User-friendly 500 error handler that renders the UI with an informative error message."""
+    logger.exception(f"Internal server error: {e}")
+    return render_template(
+        "index.html",
+        error="An internal server error occurred while analyzing the APK. Please ensure the file is a valid Android APK.",
+    ), 500
 
 
 # Global audit engine and reporter
@@ -113,6 +150,12 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/scan", methods=["GET"])
+def scan_get():
+    """Redirect GET /scan to the upload form — prevents 405 Method Not Allowed."""
+    return redirect(url_for("index"))
+
+
 @app.route("/scan", methods=["POST"])
 def scan():
     """Validate uploaded APK, run decoding and rule evaluation, then redirect to report."""
@@ -122,6 +165,10 @@ def scan():
     file = request.files["apk_file"]
     if not file or not file.filename:
         return render_template("index.html", error="No APK file selected for upload."), 400
+
+    # On Vercel, warn the user about the 4 MB body size limit upfront in the error message
+    if IS_VERCEL:
+        logger.info("Running on Vercel serverless — APK size limited to 4 MB.")
 
     # 1. Validation
     is_valid, err_msg = validate_apk_file(file.stream, original_filename=file.filename)

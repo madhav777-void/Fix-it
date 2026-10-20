@@ -70,7 +70,12 @@
         <div class="upload-zone-classic" id="drop-zone">
           <div class="upload-zone-icon">📁</div>
           <div class="upload-zone-title">Drag and drop your APK file here</div>
-          <div class="upload-zone-sub">or click to browse from your device (Max 200 MB &bull; .apk)</div>
+          <div class="upload-zone-sub">
+            or click to browse from your device &bull; Max <strong>{{ max_upload_mb }} MB</strong> &bull; .apk only
+            {% if is_vercel %}
+            &bull; <a href="https://github.com/madhav777-void/Fix-it#docker" target="_blank" rel="noopener noreferrer" style="color:inherit;">Self-host Docker for 200 MB</a>
+            {% endif %}
+          </div>
           <input type="file" id="apk_file" name="apk_file" accept=".apk" required onchange="handleFileSelected(this)">
           <div id="selected-file-name" class="file-selected-badge" style="display: none;"></div>
         </div>
@@ -141,12 +146,30 @@
     const uploadForm = document.getElementById('upload-form');
     const loadingOverlay = document.getElementById('loading-overlay');
 
+    // Max size synced with server MAX_CONTENT_LENGTH (4 MB on Vercel, 200 MB on self-hosted)
+    const MAX_SIZE_BYTES = {{ max_upload_mb }} * 1024 * 1024;
+    const IS_VERCEL = {{ 'true' if is_vercel else 'false' }};
+
+    function showSizeError(file) {
+      const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
+      const hint = IS_VERCEL ? ' — Self-host Docker for up to 200 MB.' : '';
+      fileNameDisplay.textContent = `⚠️ ${file.name} (${sizeMb} MB) exceeds the ${MAX_SIZE_BYTES / 1024 / 1024} MB limit.${hint}`;
+      fileNameDisplay.style.display = 'inline-flex';
+      fileNameDisplay.style.color = 'var(--sev-high-text, #dc2626)';
+      submitBtn.disabled = true;
+    }
+
     function handleFileSelected(input) {
       if (input.files && input.files[0]) {
         const file = input.files[0];
+        if (file.size > MAX_SIZE_BYTES) {
+          showSizeError(file);
+          return;
+        }
         const sizeMb = (file.size / (1024 * 1024)).toFixed(2);
         fileNameDisplay.textContent = `✓ ${file.name} (${sizeMb} MB)`;
         fileNameDisplay.style.display = 'inline-flex';
+        fileNameDisplay.style.color = '';
         submitBtn.disabled = false;
       }
     }
@@ -172,7 +195,13 @@
       }
     });
 
-    uploadForm.addEventListener('submit', () => {
+    uploadForm.addEventListener('submit', (e) => {
+      // Final size guard before submit (catches edge cases)
+      if (fileInput.files && fileInput.files[0] && fileInput.files[0].size > MAX_SIZE_BYTES) {
+        e.preventDefault();
+        showSizeError(fileInput.files[0]);
+        return;
+      }
       submitBtn.disabled = true;
       loadingOverlay.style.display = 'block';
     });
